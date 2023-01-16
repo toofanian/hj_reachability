@@ -19,31 +19,20 @@ def euler_step(solver_settings, dynamics, grid, time, values, time_step=None, ma
     if active_set is None:
         active_set = jnp.zeros(grid.shape, dtype=bool)
     time_direction = jnp.sign(max_time_step) if time_step is None else jnp.sign(time_step)
-    signed_hamiltonian = lambda *args, **kwargs: time_direction * dynamics.hamiltonian(*args, **kwargs)
     left_grad_values, right_grad_values = grid.upwind_grad_values(solver_settings.upwind_scheme, values)
     dissipation_coefficients = solver_settings.artificial_dissipation_scheme(dynamics.partial_max_magnitudes,
                                                                              grid.states, time, values,
                                                                              left_grad_values, right_grad_values)
-
-    def hammy(_state, _value, _left_grad_value, _right_grad_value, _dissipation_coefficients, _active_status):
-        def _hammy(__state, __time, __value, __left_grad_value, __right_grad_value, __dissipation_coefficients):
-            return lax_friedrichs_numerical_hamiltonian(
-                signed_hamiltonian, __state, __time, __value, __left_grad_value, __right_grad_value, __dissipation_coefficients
-            )
-
-        def _no_hammy(*args, **kwargs):
-            return jnp.array(0, dtype=jnp.float32)
-
-        return jax.lax.cond(
-            _active_status,
-            _hammy,
-            _no_hammy,
-            *[_state, time, _value, _left_grad_value, _right_grad_value, _dissipation_coefficients]
-        )
-
     dvalues_dt = -solver_settings.hamiltonian_postprocessor(
         time_direction * utils.multivmap(
-            hammy,
+            lambda _state, _value, _left_grad_value, _right_grad_value, _dissipation_coefficients, _active_status: jax.lax.cond(
+                _active_status,
+                lambda __state, __time, __value, __left_grad_value, __right_grad_value, __dissipation_coefficients: lax_friedrichs_numerical_hamiltonian(
+                    lambda *args, **kwargs: time_direction * dynamics.hamiltonian(*args, **kwargs), __state, __time, __value, __left_grad_value, __right_grad_value, __dissipation_coefficients
+                ),
+                lambda *args, **kwargs: jnp.array(0, dtype=jnp.float32),
+                *[_state, time, _value, _left_grad_value, _right_grad_value, _dissipation_coefficients]
+            ),
             np.arange(grid.ndim)
         )(grid.states, values, left_grad_values, right_grad_values, dissipation_coefficients, active_set)
                                                             )
