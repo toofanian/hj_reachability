@@ -34,10 +34,10 @@ static_obstacle = lambda obstacle: (lambda t, v: jnp.maximum(v, obstacle))
 
 class SolverAccuracyEnum(str, Enum):
     """Enum for solver accuracy levels."""
-    low = "low"
-    medium = "medium"
-    high = "high"
-    very_high = "very_high"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    VERY_HIGH = "very_high"
 
 
 @struct.dataclass
@@ -66,16 +66,16 @@ class SolverSettings:
 
     @classmethod
     def with_accuracy(cls, accuracy: SolverAccuracyEnum, **kwargs) -> "SolverSettings":
-        if accuracy == SolverAccuracyEnum.low:
+        if accuracy == SolverAccuracyEnum.LOW:
             upwind_scheme = upwind_first.first_order
             time_integrator = time_integration.first_order_total_variation_diminishing_runge_kutta
-        elif accuracy == SolverAccuracyEnum.medium:
+        elif accuracy == SolverAccuracyEnum.MEDIUM:
             upwind_scheme = upwind_first.ENO2
             time_integrator = time_integration.second_order_total_variation_diminishing_runge_kutta
-        elif accuracy == SolverAccuracyEnum.high:
+        elif accuracy == SolverAccuracyEnum.HIGH:
             upwind_scheme = upwind_first.WENO3
             time_integrator = time_integration.third_order_total_variation_diminishing_runge_kutta
-        elif accuracy == SolverAccuracyEnum.very_high:
+        elif accuracy == SolverAccuracyEnum.VERY_HIGH:
             upwind_scheme = upwind_first.WENO5
             time_integrator = time_integration.third_order_total_variation_diminishing_runge_kutta
         else:
