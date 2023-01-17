@@ -1,5 +1,6 @@
 import contextlib
 import functools
+from enum import Enum
 
 from flax import struct
 import jax
@@ -31,6 +32,14 @@ backwards_reachable_tube = lambda x: jnp.minimum(x, 0)
 static_obstacle = lambda obstacle: (lambda t, v: jnp.maximum(v, obstacle))
 
 
+class SolverAccuracyEnum(str, Enum):
+    """Enum for solver accuracy levels."""
+    low = "low"
+    medium = "medium"
+    high = "high"
+    very_high = "very_high"
+
+
 @struct.dataclass
 class SolverSettings:
     upwind_scheme: Callable = struct.field(
@@ -56,19 +65,21 @@ class SolverSettings:
     CFL_number: float = 0.75
 
     @classmethod
-    def with_accuracy(cls, accuracy: Text, **kwargs) -> "SolverSettings":
-        if accuracy == "low":
+    def with_accuracy(cls, accuracy: SolverAccuracyEnum, **kwargs) -> "SolverSettings":
+        if accuracy == SolverAccuracyEnum.low:
             upwind_scheme = upwind_first.first_order
             time_integrator = time_integration.first_order_total_variation_diminishing_runge_kutta
-        elif accuracy == "medium":
+        elif accuracy == SolverAccuracyEnum.medium:
             upwind_scheme = upwind_first.ENO2
             time_integrator = time_integration.second_order_total_variation_diminishing_runge_kutta
-        elif accuracy == "high":
+        elif accuracy == SolverAccuracyEnum.high:
             upwind_scheme = upwind_first.WENO3
             time_integrator = time_integration.third_order_total_variation_diminishing_runge_kutta
-        elif accuracy == "very_high":
+        elif accuracy == SolverAccuracyEnum.very_high:
             upwind_scheme = upwind_first.WENO5
             time_integrator = time_integration.third_order_total_variation_diminishing_runge_kutta
+        else:
+            raise ValueError(f"Unknown accuracy level. Use one of {list(SolverAccuracyEnum)}.")
         return cls(upwind_scheme=upwind_scheme, time_integrator=time_integrator, **kwargs)
 
 
