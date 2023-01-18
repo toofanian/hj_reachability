@@ -17,7 +17,7 @@ def lax_friedrichs_numerical_hamiltonian(hamiltonian, state, time, value, left_g
 @functools.partial(jax.jit, static_argnames="dynamics")
 def euler_step(solver_settings, dynamics, grid, time, values, time_step=None, max_time_step=None, active_set=None):
     if active_set is None:
-        active_set = jnp.zeros(grid.shape, dtype=bool)
+        active_set = jnp.ones(grid.shape, dtype=bool)
     time_direction = jnp.sign(max_time_step) if time_step is None else jnp.sign(time_step)
     left_grad_values, right_grad_values = grid.upwind_grad_values(solver_settings.upwind_scheme, values)
     dissipation_coefficients = solver_settings.artificial_dissipation_scheme(dynamics.partial_max_magnitudes,
