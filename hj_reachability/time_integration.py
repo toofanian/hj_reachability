@@ -15,9 +15,7 @@ def lax_friedrichs_numerical_hamiltonian(hamiltonian, state, time, value, left_g
 
 
 @functools.partial(jax.jit, static_argnames="dynamics")
-def euler_step(solver_settings, dynamics, grid, time, values, time_step=None, max_time_step=None, active_set=None):
-    if active_set is None:
-        active_set = jnp.ones(grid.shape, dtype=bool)
+def euler_step(solver_settings, dynamics, grid, time, values, active_set, time_step=None, max_time_step=None, ):
     time_direction = jnp.sign(max_time_step) if time_step is None else jnp.sign(time_step)
     left_grad_values, right_grad_values = grid.upwind_grad_values(solver_settings.upwind_scheme, values)
     dissipation_coefficients = solver_settings.artificial_dissipation_scheme(dynamics.partial_max_magnitudes,
@@ -43,24 +41,24 @@ def euler_step(solver_settings, dynamics, grid, time, values, time_step=None, ma
     return time + time_step, values + time_step * dvalues_dt
 
 
-def first_order_total_variation_diminishing_runge_kutta(solver_settings, dynamics, grid, time, values, target_time, active_set=None):
-    time_1, values_1 = euler_step(solver_settings, dynamics, grid, time, values, max_time_step=target_time - time, active_set=active_set)
+def first_order_total_variation_diminishing_runge_kutta(solver_settings, dynamics, grid, time, values, target_time, active_set):
+    time_1, values_1 = euler_step(solver_settings, dynamics, grid, time, values, active_set, max_time_step=target_time - time)
     return time_1, solver_settings.value_postprocessor(time_1, values_1)
 
 
-def second_order_total_variation_diminishing_runge_kutta(solver_settings, dynamics, grid, time, values, target_time, active_set=None):
-    time_1, values_1 = euler_step(solver_settings, dynamics, grid, time, values, max_time_step=target_time - time, active_set=active_set)
+def second_order_total_variation_diminishing_runge_kutta(solver_settings, dynamics, grid, time, values, target_time, active_set):
+    time_1, values_1 = euler_step(solver_settings, dynamics, grid, time, values, active_set, max_time_step=target_time - time)
     # TODO: Think about whether active set enforcing zero change interferes with runge kutta accuracy.
     time_step = time_1 - time
-    _, values_2 = euler_step(solver_settings, dynamics, grid, time_1, values_1, time_step, active_set)
+    _, values_2 = euler_step(solver_settings, dynamics, grid, time_1, values_1, active_set, time_step)
     return time_1, solver_settings.value_postprocessor(time_1, (values + values_2) / 2)
 
 
-def third_order_total_variation_diminishing_runge_kutta(solver_settings, dynamics, grid, time, values, target_time, active_set=None):
-    time_1, values_1 = euler_step(solver_settings, dynamics, grid, time, values, max_time_step=target_time - time, active_set=active_set)
+def third_order_total_variation_diminishing_runge_kutta(solver_settings, dynamics, grid, time, values, target_time, active_set):
+    time_1, values_1 = euler_step(solver_settings, dynamics, grid, time, values, active_set, max_time_step=target_time - time)
     # TODO: Think about whether active set enforcing zero change interferes with runge kutta accuracy.
     time_step = time_1 - time
-    _, values_2 = euler_step(solver_settings, dynamics, grid, time_1, values_1, time_step, active_set)
+    _, values_2 = euler_step(solver_settings, dynamics, grid, time_1, values_1, active_set, time_step)
     time_0_5, values_0_5 = time + time_step / 2, (3 / 4) * values + (1 / 4) * values_2
-    _, values_1_5 = euler_step(solver_settings, dynamics, grid, time_0_5, values_0_5, time_step, active_set)
+    _, values_1_5 = euler_step(solver_settings, dynamics, grid, time_0_5, values_0_5, active_set, time_step)
     return time_1, solver_settings.value_postprocessor(time_1, (1 / 3) * values + (2 / 3) * values_1_5)

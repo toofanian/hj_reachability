@@ -85,6 +85,9 @@ class SolverSettings:
 
 @functools.partial(jax.jit, static_argnames=("dynamics", "progress_bar"))
 def step(solver_settings, dynamics, grid, time, values, target_time, active_set=None, progress_bar=True):
+    if active_set is None:
+        active_set = jnp.ones_like(values, dtype=jnp.bool_)
+
     with (_try_get_progress_bar(time, target_time) if progress_bar is True else nullcontext(progress_bar)) as bar:
 
         def sub_step(time_values):
@@ -99,6 +102,9 @@ def step(solver_settings, dynamics, grid, time, values, target_time, active_set=
 
 @functools.partial(jax.jit, static_argnames=("dynamics", "progress_bar"))
 def solve(solver_settings, dynamics, grid, times, initial_values, active_set=None, progress_bar=True):
+    if active_set is None:
+        active_set = jnp.ones_like(initial_values, dtype=jnp.bool_)
+
     with (_try_get_progress_bar(times[0], times[-1]) if progress_bar is True else nullcontext(progress_bar)) as bar:
         make_carry_and_output_slice = lambda t, v: ((t, v), v)
         return jnp.concatenate([
