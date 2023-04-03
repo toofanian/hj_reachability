@@ -38,6 +38,7 @@ class SolverAccuracyEnum(str, Enum):
     MEDIUM = "medium"
     HIGH = "high"
     VERY_HIGH = "very_high"
+    CUSTOMODP = "customodp"
 
 
 @struct.dataclass
@@ -78,8 +79,12 @@ class SolverSettings:
         elif accuracy == SolverAccuracyEnum.VERY_HIGH:
             upwind_scheme = upwind_first.WENO5
             time_integrator = time_integration.third_order_total_variation_diminishing_runge_kutta
+        elif accuracy == SolverAccuracyEnum.CUSTOMODP:
+            upwind_scheme = upwind_first.ENO2
+            time_integrator = time_integration.third_order_total_variation_diminishing_runge_kutta
         else:
             raise ValueError(f"Unknown accuracy level. Use one of {list(SolverAccuracyEnum)}.")
+        print("SolverSettings.with_accuracy: upwind_scheme = {}, time_integrator = {}".format(upwind_scheme, time_integrator))
         return cls(upwind_scheme=upwind_scheme, time_integrator=time_integrator, **kwargs)
 
 
